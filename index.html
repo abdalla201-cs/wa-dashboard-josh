@@ -190,8 +190,10 @@
         // ---- Subscriber access gate (monthly key) — replaces the old domain lock ----
         (function () {
             const VALID_HASH = "d8842e9ba23c983958e5bfee03492f74d9c1e890cb05fb44f7526087e81c16b6";
-            const MONTH = new Date().toISOString().slice(0, 7);          // YYYY-MM
-            const FLAG = "wac_unlocked_" + MONTH;                        // stays unlocked for the month
+            const EXPIRES = "2026-07-24";                                // subscription paid-through date (YYYY-MM-DD)
+            const FLAG = "wac_unlock_" + VALID_HASH.slice(0, 12);        // re-prompts whenever the key is rotated
+            function daysLeft() { return Math.ceil((new Date(EXPIRES + "T23:59:59") - new Date()) / 86400000); }
+            function isExpired() { return daysLeft() < 0; }
             async function sha256hex(s) {
                 const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
                 return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
@@ -241,7 +243,7 @@
 @keyframes wgShake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-5px)}40%,60%{transform:translateX(5px)}}`;
                 document.head.appendChild(s);
             }
-            function showGate() {
+            function showGate(preMsg) {
                 if (document.getElementById("wacLoginGate")) return;
                 injectAssets();
                 const o = document.createElement("div");
@@ -265,30 +267,67 @@
                       err = o.querySelector("#wacKeyErr"), spin = o.querySelector(".wg-spin"),
                       btxt = o.querySelector(".wg-btxt"), card = o.querySelector(".wg-card");
                 let busy = false;
+                function fail(msg) {
+                    busy = false; btn.disabled = false; spin.style.display = "none"; btxt.textContent = "Unlock";
+                    err.textContent = msg;
+                    card.classList.remove("wg-shake"); void card.offsetWidth; card.classList.add("wg-shake");
+                }
                 async function tryKey() {
                     const v = (input.value || "").trim();
                     if (!v || busy) return;
                     busy = true; btn.disabled = true; spin.style.display = "inline-block"; btxt.textContent = "Verifying";
                     const h = await sha256hex(v);
                     await new Promise(r => setTimeout(r, 350));
-                    if (h === VALID_HASH) {
-                        try { localStorage.setItem(FLAG, "1"); } catch (e) {}
-                        btxt.textContent = "Unlocked"; spin.style.display = "none";
-                        o.style.transition = "opacity .35s"; o.style.opacity = "0";
-                        setTimeout(removeGate, 350);
-                    } else {
-                        busy = false; btn.disabled = false; spin.style.display = "none"; btxt.textContent = "Unlock";
-                        err.textContent = "Invalid or expired key. Contact your provider.";
-                        card.classList.remove("wg-shake"); void card.offsetWidth; card.classList.add("wg-shake");
-                    }
+                    if (h !== VALID_HASH) { fail("Invalid key. Contact your provider."); return; }
+                    if (isExpired()) { fail("Your subscription has expired. Please renew."); return; }
+                    try { localStorage.setItem(FLAG, "1"); } catch (e) {}
+                    btxt.textContent = "Unlocked"; spin.style.display = "none";
+                    o.style.transition = "opacity .35s"; o.style.opacity = "0";
+                    setTimeout(function () { removeGate(); onUnlocked(); }, 350);
                 }
                 btn.addEventListener("click", tryKey);
                 input.addEventListener("keydown", function (e) { if (e.key === "Enter") tryKey(); });
                 input.addEventListener("input", function () { err.textContent = ""; });
+                if (preMsg === "expired") {
+                    o.querySelector(".wg-sub").textContent = "Your subscription has expired.";
+                    err.textContent = "Please renew to continue. Contact your provider.";
+                }
                 setTimeout(function () { input.focus(); }, 60);
             }
-            try { if (localStorage.getItem(FLAG) === "1") return; } catch (e) {}
-            if (document.body) showGate(); else document.addEventListener("DOMContentLoaded", showGate);
+            function onUnlocked() {
+                function bar() {
+                    if (document.getElementById("wacStatusBar")) return;
+                    injectAssets();
+                    const d = Math.max(daysLeft(), 0);
+                    const b = document.createElement("div");
+                    b.id = "wacStatusBar";
+                    if (d <= 5) b.className = "warn";
+                    b.innerHTML = '<style>'
+                        + '#wacStatusBar{position:fixed;top:10px;right:12px;z-index:2147483646;display:flex;align-items:center;gap:10px;background:rgba(20,24,30,.92);border:1px solid rgba(255,255,255,.10);border-radius:999px;padding:6px 8px 6px 14px;font-family:\'Sora\',system-ui,sans-serif;font-size:12px;color:#cfd8e0;box-shadow:0 6px 20px rgba(0,0,0,.35)}'
+                        + '#wacStatusBar .wsdot{width:8px;height:8px;border-radius:50%;background:#16a34a}'
+                        + '#wacStatusBar.warn .wsdot{background:#f59e0b}'
+                        + '#wacStatusBar b{color:#fff;font-weight:600}'
+                        + '#wacStatusBar button{border:none;background:rgba(255,255,255,.08);color:#cfd8e0;font:600 12px \'Sora\',sans-serif;padding:5px 12px;border-radius:999px;cursor:pointer;transition:background .2s}'
+                        + '#wacStatusBar button:hover{background:rgba(255,255,255,.18);color:#fff}'
+                        + '</style>'
+                        + '<span class="wsdot"></span><span>Subscription &middot; <b>' + d + ' day' + (d === 1 ? '' : 's') + ' left</b></span>'
+                        + '<button id="wacSignOut">Sign out</button>';
+                    document.body.appendChild(b);
+                    b.querySelector("#wacSignOut").addEventListener("click", function () {
+                        try { localStorage.removeItem(FLAG); } catch (e) {}
+                        location.reload();
+                    });
+                }
+                if (document.body) bar(); else document.addEventListener("DOMContentLoaded", bar);
+            }
+            if (isExpired()) {
+                if (document.body) showGate("expired"); else document.addEventListener("DOMContentLoaded", function () { showGate("expired"); });
+            } else {
+                let unlocked = false;
+                try { unlocked = localStorage.getItem(FLAG) === "1"; } catch (e) {}
+                if (unlocked) onUnlocked();
+                else if (document.body) showGate(); else document.addEventListener("DOMContentLoaded", showGate);
+            }
         })();
 
         document.addEventListener('contextmenu', event => event.preventDefault());
