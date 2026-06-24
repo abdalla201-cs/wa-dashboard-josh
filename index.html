@@ -119,7 +119,7 @@
                     <label style="font-size:0.8rem; opacity:0.85; display:block; margin-bottom:6px;">🔑 API Key <span style="color:var(--accent-red);">(Required for AI OCR)</span></label>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key..." class="api-input" style="margin-bottom:0;" oninput="saveGeminiKey(this.value)" />
-                        <button class="btn-secondary" onclick="testApiKey()" style="padding: 8px; margin: 0; min-width: 40px;" title="فحص المفتاح">🧪</button>
+                        <button class="btn-secondary" onclick="testApiKey()" style="padding: 8px; margin: 0; min-width: 40px;" title="Test key">🧪</button>
                         <span id="geminiStatus" style="font-size:0.75rem; white-space:nowrap; opacity:0.75;">⬜ Not set</span>
                     </div>
                 </div>
@@ -152,7 +152,6 @@
                 </div>
                 <div style="margin-top: 5px; margin-bottom: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
                     <button class="btn-secondary" onclick="copyForWaChecker()" style="width: 100%; margin-bottom: 10px;">📋 Copy for WA Extension</button>
-                    <button class="btn-secondary" onclick="window.postMessage({__wacClear:1},'*')" style="width: 100%; margin-bottom: 10px;">🧹 امسح نتايج الفحص</button>
                     <input type="file" id="lookupFileInput" class="file-input" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                     <div class="upload-area" id="lookupUploadArea" style="min-height: 50px; padding: 10px; margin-bottom: 0;" onclick="document.getElementById('lookupFileInput').click()">
                         <p style="font-size: 0.8rem; color: var(--text-muted); pointer-events: none;">📂 Drop WA Checker Excel</p>
@@ -371,9 +370,9 @@
             crossContactDuplicates = new Map();
             const numberTotalCount = new Map();
 
-            // 1. إحصاء التكرارات الشاملة بدقة لتغذية قسم (Duplicates Found)
+            // 1. Count global duplicates for the Duplicates Found section
             contacts.forEach(contact => {
-                // إزالة التكرار الداخلي ضمن نفس الشخص أولاً لمنع التضخم الوهمي
+                // de-dupe within the same person first to avoid false inflation
                 contact.numbers = [...new Set(contact.numbers)];
                 
                 contact.numbers.forEach(n => {
@@ -381,23 +380,23 @@
                 });
             });
 
-            // تسجيل الأرقام المكررة في الخريطة
+            // record duplicate numbers in the map
             numberTotalCount.forEach((count, num) => {
                 if (count > 1) crossContactDuplicates.set(num, count);
             });
 
-            // 2. التجريد القاسي (Strict Global Deduplication): الرقم يعيش مرة واحدة فقط عند أول ظهور له
+            // 2. Strict global de-dup: each number lives once, at its first occurrence
             contacts.forEach(contact => {
-                contact._hadNumbers = contact.numbers.length > 0; // كان شخصاً حقيقياً له أرقام
+                contact._hadNumbers = contact.numbers.length > 0; // was a real person with numbers
                 contact.numbers = contact.numbers.filter(n => {
-                    if (globalSeen.has(n)) return false; // مسح الرقم المكرر فوراً دون أي استثناءات
+                    if (globalSeen.has(n)) return false; // drop the duplicate immediately
                     globalSeen.add(n);
                     return true;
                 });
             });
 
-            // 3. تنظيف الذاكرة العميقة (Garbage Collection)
-            // نُبقي الاسم ظاهراً لأي شخص كان له أرقام أصلاً، حتى لو اتشالت كلها كمكرر — فمحدش يختفي
+            // 3. Garbage collection
+            // keep a name visible if it ever had numbers, even if all were de-duped away
             contacts = contacts.filter(c =>
                 c.isLabel ||
                 c._hadNumbers ||
@@ -406,7 +405,7 @@
                 (c.addresses && c.addresses.length > 0)
             );
 
-            // 4. تحديث المصفوفة الكلية المرجعية
+            // 4. Update the global reference array
             allNumbers = Array.from(globalSeen);
         }
 
@@ -454,7 +453,7 @@
             const invalidWords = ['repeat', '1st degree', '2nd degree', '3rd degree', 'associates', 'no work', 'wrong', 'do not call', 'dnc', 'not interested', 'voicemail', 'disconnected', 'busy', 'no answer', 'left message', 'spoke', 'callback', 'call back', 'texted', 'dead', 'sold', 'spanish', 'language', 'invalid', 'status', 'update', 'said', 'told', 'interested', 'machine', 'mailbox', 'message', 'none', 'n/a', 'na', 'not in service', 'no longer', 'business', 'out of service', 'does not work', 'stop', 'quit', 'opt out', 'remove', 'hang up', 'hung up', 'bad number', 'wrong number', 'not working', 'no english', 'english', 'not', 'dont', 'doesnt', 'work', 'worked', 'working', 'number', 'phone', 'contact', 'call', 'caller', 'cancel', 'cancelled', 'delete', 'deleted', 'unknown', 'fake', 'bogus', 'scam', 'spam', 'spamming', 'scammer', 'fraud', 'fraudulent', 'hello', 'owner', 'manager', 'tenant', 'landlord', 'resident', 'husband', 'wife', 'son', 'daughter', 'father', 'mother', 'brother', 'sister', 'uncle', 'aunt', 'cousin', 'nephew', 'niece', 'grandfather', 'grandmother', 'grandson', 'granddaughter', 'family', 'friend', 'neighbor', 'associate', 'relative', 'relatives', 'neighbors', 'associates', 'info', 'information', 'details', 'detail', 'data', 'record', 'records', 'file', 'files', 'account', 'accounts', 'profile', 'profiles', 'report', 'reports', 'document', 'documents', 'vm', 'lm', 'cb', 'ni', 'wn', 'bad', 'good', 'yes', 'no', 'true', 'false', 'same', 'diff', 'different', 'new', 'old', 'current', 'previous', 'historic', 'voice', 'line', 'cell', 'mobile', 'landline', 'wireless', 'telephone', 'tel', 'fax', 'email', 'address', 'addr', 'location', 'place', 'property', 'properties', 'home', 'house', 'apartment', 'apt', 'suite', 'ste', 'unit', 'room', 'rm', 'building', 'bldg', 'floor', 'fl', 'level', 'lvl', 'street', 'st', 'avenue', 'ave', 'boulevard', 'blvd', 'drive', 'dr', 'road', 'rd', 'lane', 'ln', 'way', 'court', 'ct', 'terrace', 'ter', 'parkway', 'pkwy', 'highway', 'hwy', 'circle', 'cir', 'loop', 'trail', 'trl', 'row', 'square', 'sq', 'broadway', 'crossing', 'xing', 'alley', 'left vm', 'lm on', 'did not answer', 'hanged up', 'not int', 'no int', 'take me off', 'remove me', 'wrong num', 'wrong person', 'wrong contact', 'bad num', 'mailbox full', 'vm full', 'voicemail full', 'not setup', 'not set up', 'busy signal', 'fast busy', 'fax machine', 'modem', 'screeching', 'dead air', 'silence', 'dropped', 'dropped call', 'call dropped', 'call later', 'try again', 'try later', 'call tomorrow', 'appointment', 'appt', 'schedule', 'scheduled', 'meeting', 'follow up', 'lead', 'prospect', 'opportunity', 'deal', 'client', 'customer', 'patient', 'buyer', 'seller', 'renter', 'leaser', 'lessee', 'lessor', 'broker', 'agent', 'realtor', 'real estate', 'realty', 'property management', 'pm', 'llc', 'inc', 'corp', 'corporation', 'company', 'co', 'ltd', 'limited', 'group', 'grp', 'partners', 'enterprises', 'ent', 'holdings', 'investments', 'inv', 'trust', 'fund', 'estate of', 'heirs of', 'care of', 'attn', 'attention'];
             for (let word of invalidWords) { if (new RegExp('\\b' + word + '\\b', 'i').test(lowerName)) return false; }
             
-            // رفع حد الكلمات المسموح بها لاستيعاب ملحقات الـ (AKA) والأقواس
+            // raise the word limit to fit AKA suffixes and parentheses
             const wordsCount = lowerName.split(/\s+/).length;
             if (wordsCount > 10) return false; 
             if (wordsCount === 1 && lowerName.length < 3) return false;
@@ -486,7 +485,7 @@
                 const line = lines[i].trim();
                 if (!line) continue;
 
-                // التعديل المعماري: عدم بتر أي أرقام من السطر عشوائياً
+                // do not arbitrarily truncate numbers from the line
                 const cleanedLine = line.trim();
                 const emails = extractEmails(line);
                 const addr = extractAddressFromLine(line);
@@ -501,7 +500,7 @@
                     potentialName = cleanedLine; 
                     isDegreeLabel = true;
                 } else {
-                    // التعديل المعماري: السماح بالأقواس وعلامة الربط والعمر
+                    // allow parentheses, hyphen, and age in names
                     const nameMatch = cleanedLine.match(/^([A-Z][A-Z\s,.'\-()&]+?(?:\s*(?:AGE|-)?\s*\d{1,3})?)$/i);
                     
                     if (nameMatch && cleanedLine.length > 3 && !line.includes('@') && !/\b\d{5}(?:-\d{4})?\b/.test(line) && numbers.length === 0) {
@@ -512,7 +511,7 @@
                 if (potentialName && (isDegreeLabel || isValidContactName(potentialName))) {
                     if (currentContact) newContacts.push(currentContact);
                     
-                    // التعديل المعماري: عزل البيانات اليتيمة بدلاً من توريثها
+                    // isolate orphan data instead of inheriting it
                     if (orphanNumbers.length || orphanEmails.length || orphanAddresses.length) {
                          newContacts.push({ name: "EXTRACTED DATA", numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses] });
                     }
@@ -560,7 +559,7 @@
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
             const labelPattern = /^(\d+(?:st|nd|rd|th)\s*degree|associates?|relatives?|neighbors?)(?:\s+for.*)?$/i;
             
-            // التعديل المعماري: مطابقة تعبير الـ OCR مع التعديل الجديد
+            // match the OCR pattern with the new logic
             const standaloneNamePattern = /^([A-Z][A-Z\s,.'\-()&]+?(?:\s*(?:AGE|-)?\s*\d{1,3})?)$/i;
             const prefixedNamePattern = /(?:Relatives|Neighbors|Associates)\s+For:\s+([A-Z][A-Z\s]+[A-Z])/i;
             const allCapsNamePattern = /^([A-Z]{2,}(?:\s+[A-Z]{1,2}(?:\s+[A-Z]{2,})+))$/;
