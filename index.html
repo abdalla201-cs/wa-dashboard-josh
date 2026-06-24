@@ -197,32 +197,95 @@
                 return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
             }
             function removeGate() { const o = document.getElementById("wacLoginGate"); if (o) o.remove(); }
+            const BRAND = "Lead Filter"; // change this to your product name anytime
+            function injectAssets() {
+                if (!document.getElementById("wgFont")) {
+                    const l = document.createElement("link"); l.id = "wgFont"; l.rel = "stylesheet";
+                    l.href = "https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap";
+                    document.head.appendChild(l);
+                }
+                if (document.getElementById("wgStyle")) return;
+                const s = document.createElement("style"); s.id = "wgStyle";
+                s.textContent = `
+#wacLoginGate{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;
+ background:radial-gradient(1100px 560px at 50% -12%, rgba(51,204,255,.12), transparent 60%), #07090d;
+ font-family:'Sora',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#wacLoginGate *{box-sizing:border-box}
+#wacLoginGate .wg-card{position:relative;width:384px;max-width:94vw;padding:40px 34px 24px;border-radius:20px;text-align:center;
+ background:linear-gradient(180deg,rgba(23,27,34,.94),rgba(14,17,22,.94));border:1px solid rgba(255,255,255,.08);
+ box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05);animation:wgIn .55s cubic-bezier(.16,1,.3,1) both}
+@keyframes wgIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+#wacLoginGate .wg-logo{width:58px;height:58px;margin:0 auto 16px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+ background:linear-gradient(145deg,#39cffb,#1f8fc4);box-shadow:0 10px 26px rgba(51,204,255,.32)}
+#wacLoginGate .wg-brand{color:#dfe7ee;font-size:12px;font-weight:600;letter-spacing:3px;text-transform:uppercase;margin:0 0 24px;opacity:.85}
+#wacLoginGate h2{color:#fff;font-size:22px;font-weight:600;margin:0 0 7px;letter-spacing:-.2px}
+#wacLoginGate .wg-sub{color:#8b96a3;font-size:13.5px;margin:0 0 24px;line-height:1.55}
+#wacLoginGate .wg-field{position:relative;margin-bottom:14px}
+#wacLoginGate .wg-field>svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:#566675}
+#wacLoginGate input{width:100%;padding:15px 14px 15px 44px;border-radius:12px;border:1px solid rgba(255,255,255,.10);
+ background:rgba(7,10,14,.85);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:15px;letter-spacing:1.5px;outline:none;transition:border-color .2s,box-shadow .2s}
+#wacLoginGate input::placeholder{color:#46515f;letter-spacing:1px}
+#wacLoginGate input:focus{border-color:rgba(57,207,251,.65);box-shadow:0 0 0 4px rgba(51,204,255,.13)}
+#wacLoginGate button{width:100%;margin-top:4px;padding:15px;border:none;border-radius:12px;cursor:pointer;
+ background:linear-gradient(180deg,#43d3ff,#1fa0d6);color:#04141c;font-family:'Sora',sans-serif;font-size:15px;font-weight:600;
+ display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .12s,filter .2s,box-shadow .2s;box-shadow:0 10px 26px rgba(51,204,255,.24)}
+#wacLoginGate button:hover{filter:brightness(1.06);transform:translateY(-1px);box-shadow:0 14px 32px rgba(51,204,255,.32)}
+#wacLoginGate button:active{transform:translateY(0)}
+#wacLoginGate button:disabled{opacity:.75;cursor:default;transform:none}
+#wacLoginGate .wg-spin{width:16px;height:16px;border:2px solid rgba(4,20,28,.35);border-top-color:#04141c;border-radius:50%;animation:wgSpin .7s linear infinite;display:none}
+@keyframes wgSpin{to{transform:rotate(360deg)}}
+#wacLoginGate .wg-err{color:#ff6b6b;font-size:12.5px;margin-top:13px;min-height:16px}
+#wacLoginGate .wg-foot{margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);color:#697483;font-size:11.5px;
+ display:flex;align-items:center;justify-content:center;gap:7px}
+#wacLoginGate .wg-shake{animation:wgShake .4s}
+@keyframes wgShake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-5px)}40%,60%{transform:translateX(5px)}}`;
+                document.head.appendChild(s);
+            }
             function showGate() {
                 if (document.getElementById("wacLoginGate")) return;
+                injectAssets();
                 const o = document.createElement("div");
                 o.id = "wacLoginGate";
-                o.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:#0d0d0d;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif";
-                o.innerHTML =
-                    '<div style="background:#161616;border:1px solid #2a2a2a;border-radius:14px;padding:32px;width:340px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5)">' +
-                    '<div style="font-size:34px;margin-bottom:8px">🔒</div>' +
-                    '<h2 style="color:#fff;margin:0 0 6px;font-size:20px">Enter your access key</h2>' +
-                    '<p style="color:#888;font-size:13px;margin:0 0 18px">Your monthly subscription key</p>' +
-                    '<input id="wacKeyInput" type="text" placeholder="Access key" autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;padding:12px;border-radius:8px;border:1px solid #333;background:#0d0d0d;color:#fff;font-size:15px;text-align:center;letter-spacing:1px">' +
-                    '<button id="wacKeyBtn" style="width:100%;margin-top:12px;padding:12px;border:none;border-radius:8px;background:#16a34a;color:#fff;font-size:15px;font-weight:600;cursor:pointer">Unlock</button>' +
-                    '<div id="wacKeyErr" style="color:#ef4444;font-size:13px;margin-top:10px;min-height:18px"></div>' +
-                    '</div>';
+                o.innerHTML = `
+<div class="wg-card">
+  <div class="wg-logo"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4.5h18l-7 8.2V20l-4 1.5v-8.8L3 4.5z" fill="#fff"/></svg></div>
+  <div class="wg-brand">${BRAND}</div>
+  <h2>Secure access</h2>
+  <p class="wg-sub">Enter your monthly access key to continue.</p>
+  <div class="wg-field">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.85 12.15 19 4M16 7l2 2M17 6l1.5 1.5"/></svg>
+    <input id="wacKeyInput" type="text" placeholder="Access key" autocomplete="off" spellcheck="false" aria-label="Access key">
+  </div>
+  <button id="wacKeyBtn"><span class="wg-spin"></span><span class="wg-btxt">Unlock</span></button>
+  <div id="wacKeyErr" class="wg-err"></div>
+  <div class="wg-foot"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Encrypted access &middot; Subscription required</div>
+</div>`;
                 document.documentElement.appendChild(o);
-                const input = o.querySelector("#wacKeyInput"), btn = o.querySelector("#wacKeyBtn"), err = o.querySelector("#wacKeyErr");
+                const input = o.querySelector("#wacKeyInput"), btn = o.querySelector("#wacKeyBtn"),
+                      err = o.querySelector("#wacKeyErr"), spin = o.querySelector(".wg-spin"),
+                      btxt = o.querySelector(".wg-btxt"), card = o.querySelector(".wg-card");
+                let busy = false;
                 async function tryKey() {
                     const v = (input.value || "").trim();
-                    if (!v) return;
+                    if (!v || busy) return;
+                    busy = true; btn.disabled = true; spin.style.display = "inline-block"; btxt.textContent = "Verifying";
                     const h = await sha256hex(v);
-                    if (h === VALID_HASH) { try { localStorage.setItem(FLAG, "1"); } catch (e) {} removeGate(); }
-                    else { err.textContent = "Invalid or expired key. Contact your provider."; }
+                    await new Promise(r => setTimeout(r, 350));
+                    if (h === VALID_HASH) {
+                        try { localStorage.setItem(FLAG, "1"); } catch (e) {}
+                        btxt.textContent = "Unlocked"; spin.style.display = "none";
+                        o.style.transition = "opacity .35s"; o.style.opacity = "0";
+                        setTimeout(removeGate, 350);
+                    } else {
+                        busy = false; btn.disabled = false; spin.style.display = "none"; btxt.textContent = "Unlock";
+                        err.textContent = "Invalid or expired key. Contact your provider.";
+                        card.classList.remove("wg-shake"); void card.offsetWidth; card.classList.add("wg-shake");
+                    }
                 }
                 btn.addEventListener("click", tryKey);
                 input.addEventListener("keydown", function (e) { if (e.key === "Enter") tryKey(); });
-                setTimeout(function () { input.focus(); }, 50);
+                input.addEventListener("input", function () { err.textContent = ""; });
+                setTimeout(function () { input.focus(); }, 60);
             }
             try { if (localStorage.getItem(FLAG) === "1") return; } catch (e) {}
             if (document.body) showGate(); else document.addEventListener("DOMContentLoaded", showGate);
