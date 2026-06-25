@@ -11,6 +11,6 @@
    rotating the key (your provider will give you a new hash + key).
    ============================================================ */
 window.WAC_LICENSE = {
-  expires: "2026-01-1",
+  expires: "2026-01-01",
   hash: "d8842e9ba23c983958e5bfee03492f74d9c1e890cb05fb44f7526087e81c16b6"
 };
