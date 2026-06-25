@@ -185,11 +185,13 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
         // ---- Subscriber access gate (monthly key) — replaces the old domain lock ----
         (function () {
-            const VALID_HASH = "d8842e9ba23c983958e5bfee03492f74d9c1e890cb05fb44f7526087e81c16b6";
-            const EXPIRES = "2026-07-24";                                // subscription paid-through date (YYYY-MM-DD)
+            const LIC = (typeof window !== "undefined" && window.WAC_LICENSE) || {};
+            const VALID_HASH = LIC.hash || "d8842e9ba23c983958e5bfee03492f74d9c1e890cb05fb44f7526087e81c16b6";
+            const EXPIRES = LIC.expires || "2026-07-24";                 // overridden by config.js — edit there to renew
             const FLAG = "wac_unlock_" + VALID_HASH.slice(0, 12);        // re-prompts whenever the key is rotated
             function daysLeft() { return Math.ceil((new Date(EXPIRES + "T23:59:59") - new Date()) / 86400000); }
             function isExpired() { return daysLeft() < 0; }
