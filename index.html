@@ -297,23 +297,28 @@
             }
             function onUnlocked() {
                 function bar() {
-                    if (document.getElementById("wacStatusBar")) return;
+                    if (document.getElementById("wacTopBar")) return;
                     injectAssets();
                     const d = Math.max(daysLeft(), 0);
                     const b = document.createElement("div");
-                    b.id = "wacStatusBar";
+                    b.id = "wacTopBar";
                     if (d <= 5) b.className = "warn";
                     b.innerHTML = '<style>'
-                        + '#wacStatusBar{position:fixed;top:10px;right:12px;z-index:2147483646;display:flex;align-items:center;gap:10px;background:rgba(20,24,30,.92);border:1px solid rgba(255,255,255,.10);border-radius:999px;padding:6px 8px 6px 14px;font-family:\'Sora\',system-ui,sans-serif;font-size:12px;color:#cfd8e0;box-shadow:0 6px 20px rgba(0,0,0,.35)}'
-                        + '#wacStatusBar .wsdot{width:8px;height:8px;border-radius:50%;background:#16a34a}'
-                        + '#wacStatusBar.warn .wsdot{background:#f59e0b}'
-                        + '#wacStatusBar b{color:#fff;font-weight:600}'
-                        + '#wacStatusBar button{border:none;background:rgba(255,255,255,.08);color:#cfd8e0;font:600 12px \'Sora\',sans-serif;padding:5px 12px;border-radius:999px;cursor:pointer;transition:background .2s}'
-                        + '#wacStatusBar button:hover{background:rgba(255,255,255,.18);color:#fff}'
+                        + '#wacTopBar{position:sticky;top:0;z-index:2147483646;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 16px;background:#0b0d11;border-bottom:1px solid rgba(255,255,255,.08);font-family:\'Sora\',system-ui,sans-serif;box-shadow:0 2px 14px rgba(0,0,0,.35)}'
+                        + '#wacTopBar .wb-brand{display:flex;align-items:center;gap:9px;color:#eaf0f5;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase}'
+                        + '#wacTopBar .wb-mark{width:24px;height:24px;border-radius:7px;background:linear-gradient(145deg,#39cffb,#1f8fc4);display:flex;align-items:center;justify-content:center}'
+                        + '#wacTopBar .wb-mark svg{width:14px;height:14px}'
+                        + '#wacTopBar .wb-right{display:flex;align-items:center;gap:10px}'
+                        + '#wacTopBar .wb-status{display:flex;align-items:center;gap:8px;font-size:12px;color:#aeb8c2;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:5px 12px}'
+                        + '#wacTopBar .wb-dot{width:7px;height:7px;border-radius:50%;background:#16a34a}'
+                        + '#wacTopBar.warn .wb-dot{background:#f59e0b}'
+                        + '#wacTopBar .wb-status b{color:#fff;font-weight:600}'
+                        + '#wacTopBar button{border:none;background:rgba(255,255,255,.07);color:#cfd8e0;font:600 12px \'Sora\',sans-serif;padding:6px 14px;border-radius:999px;cursor:pointer;transition:background .2s}'
+                        + '#wacTopBar button:hover{background:rgba(255,255,255,.16);color:#fff}'
                         + '</style>'
-                        + '<span class="wsdot"></span><span>Subscription &middot; <b>' + d + ' day' + (d === 1 ? '' : 's') + ' left</b></span>'
-                        + '<button id="wacSignOut">Sign out</button>';
-                    document.body.appendChild(b);
+                        + '<div class="wb-brand"><span class="wb-mark"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4.5h18l-7 8.2V20l-4 1.5v-8.8L3 4.5z" fill="#fff"/></svg></span>' + BRAND + '</div>'
+                        + '<div class="wb-right"><span class="wb-status"><span class="wb-dot"></span>Subscription &middot; <b>' + d + ' day' + (d === 1 ? '' : 's') + ' left</b></span><button id="wacSignOut">Sign out</button></div>';
+                    document.body.insertBefore(b, document.body.firstChild);
                     b.querySelector("#wacSignOut").addEventListener("click", function () {
                         try { localStorage.removeItem(FLAG); } catch (e) {}
                         location.reload();
