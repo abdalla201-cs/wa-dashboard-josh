@@ -193,8 +193,13 @@
             const VALID_HASH = LIC.hash || "d8842e9ba23c983958e5bfee03492f74d9c1e890cb05fb44f7526087e81c16b6";
             const EXPIRES = LIC.expires || "2026-07-24";                 // overridden by config.js — edit there to renew
             const FLAG = "wac_unlock_" + VALID_HASH.slice(0, 12);        // re-prompts whenever the key is rotated
-            function daysLeft() { return Math.ceil((new Date(EXPIRES + "T23:59:59") - new Date()) / 86400000); }
-            function isExpired() { return daysLeft() < 0; }
+            function expiryTime() {
+                const p = String(EXPIRES).split("-").map(function (x) { return parseInt(x, 10); });
+                if (p.length === 3 && !p.some(isNaN)) return new Date(p[0], p[1] - 1, p[2], 23, 59, 59).getTime();
+                return NaN;
+            }
+            function daysLeft() { const t = expiryTime(); return isNaN(t) ? 0 : Math.ceil((t - Date.now()) / 86400000); }
+            function isExpired() { const t = expiryTime(); return !isNaN(t) && Date.now() > t; }
             async function sha256hex(s) {
                 const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
                 return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
