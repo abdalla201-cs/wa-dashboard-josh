@@ -492,6 +492,7 @@
             let orphanNumbers = [];
             let orphanEmails = [];
             let orphanAddresses = [];
+            let orphanCellular = [];
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -502,6 +503,8 @@
                 const emails = extractEmails(line);
                 const addr = extractAddressFromLine(line);
                 const numbers = extractPhoneNumbers(line);
+                // Line whose PHONE TYPE is Cellular (whole word — bare "CELL" doesn't count)
+                const isCellularLine = /\bcellular\b/i.test(line);
 
                 let potentialName = null;
                 let isDegreeLabel = false;
@@ -525,11 +528,11 @@
                     
                     // isolate orphan data instead of inheriting it
                     if (orphanNumbers.length || orphanEmails.length || orphanAddresses.length) {
-                         newContacts.push({ name: "EXTRACTED DATA", numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses] });
+                         newContacts.push({ name: "EXTRACTED DATA", numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses], cellular: [...orphanCellular] });
                     }
-                    
-                    currentContact = { name: potentialName, numbers: [], emails: [], addresses: [], isLabel: isDegreeLabel };
-                    orphanNumbers = []; orphanEmails = []; orphanAddresses = [];
+
+                    currentContact = { name: potentialName, numbers: [], emails: [], addresses: [], cellular: [], isLabel: isDegreeLabel };
+                    orphanNumbers = []; orphanEmails = []; orphanAddresses = []; orphanCellular = [];
                 } else {
                     // Preserve a section-label / separator line in place (e.g. "---",
                     // "NO MORE RELATIVES FOUND", "SAME OWNER") so it isn't dropped and the
@@ -540,28 +543,30 @@
                     if (numbers.length === 0 && emails.length === 0 && !addr && !isHeaderJunk && cleanedLine.length >= 2 && (isSeparator || isTextLabel)) {
                         if (currentContact) newContacts.push(currentContact);
                         if (orphanNumbers.length || orphanEmails.length || orphanAddresses.length) {
-                            newContacts.push({ name: "EXTRACTED DATA", numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses] });
-                            orphanNumbers = []; orphanEmails = []; orphanAddresses = [];
+                            newContacts.push({ name: "EXTRACTED DATA", numbers: [...orphanNumbers], emails: [...orphanEmails], addresses: [...orphanAddresses], cellular: [...orphanCellular] });
+                            orphanNumbers = []; orphanEmails = []; orphanAddresses = []; orphanCellular = [];
                         }
                         // A "---" separator is only a boundary — don't show it. Text labels stay.
-                        currentContact = isSeparator ? null : { name: cleanedLine, numbers: [], emails: [], addresses: [], isLabel: true };
+                        currentContact = isSeparator ? null : { name: cleanedLine, numbers: [], emails: [], addresses: [], cellular: [], isLabel: true };
                         continue;
                     }
                     if (currentContact) {
                         currentContact.emails.push(...emails);
                         if (addr && !currentContact.addresses.includes(addr)) currentContact.addresses.push(addr);
                         numbers.forEach(n => { if (!currentContact.numbers.includes(n)) currentContact.numbers.push(n); });
+                        if (isCellularLine) numbers.forEach(n => { if (!currentContact.cellular.includes(n)) currentContact.cellular.push(n); });
                     } else {
                         orphanEmails.push(...emails);
                         if (addr && !orphanAddresses.includes(addr)) orphanAddresses.push(addr);
                         numbers.forEach(n => { if (!orphanNumbers.includes(n)) orphanNumbers.push(n); });
+                        if (isCellularLine) numbers.forEach(n => { if (!orphanCellular.includes(n)) orphanCellular.push(n); });
                     }
                 }
             }
 
             if (currentContact) newContacts.push(currentContact);
             if (orphanNumbers.length || orphanEmails.length || orphanAddresses.length) {
-                newContacts.push({ name: "EXTRACTED DATA", numbers: orphanNumbers, emails: orphanEmails, addresses: orphanAddresses });
+                newContacts.push({ name: "EXTRACTED DATA", numbers: orphanNumbers, emails: orphanEmails, addresses: orphanAddresses, cellular: orphanCellular });
             }
             return newContacts.filter(c => c.isLabel || c.numbers.length > 0 || c.emails.length > 0 || c.addresses.length > 0);
         }
@@ -591,7 +596,7 @@
             const allAddresses = text.split('\n').map(l => extractAddressFromLine(l.trim())).filter(Boolean);
             const allPhones = extractPhoneNumbers(text);
             if (allPhones.length === 0 && allEmails.length === 0) return [];
-            return [{ name: firstName || 'EXTRACTED DATA', numbers: [...new Set(allPhones)], emails: [...new Set(allEmails)], addresses: [...new Set(allAddresses)], isLabel: isLabel }];
+            return [{ name: firstName || 'EXTRACTED DATA', numbers: [...new Set(allPhones)], emails: [...new Set(allEmails)], addresses: [...new Set(allAddresses)], cellular: [], isLabel: isLabel }];
         }
 
         function handleLookupFile(file) {
@@ -631,8 +636,15 @@
             document.getElementById('lookupCount').textContent = lookupResultsMap.size;
         }
 
+        // All numbers that appeared on any Cellular-typed line (session-wide union —
+        // the tag follows the number even if dedup relocated it to another contact)
+        function getCellularSet() {
+            return new Set(contacts.flatMap(c => c.cellular || []));
+        }
+
         function updateCleanedNumbers() {
             const container = document.getElementById('cleanedNumbers');
+            const cellularSet = getCellularSet();
             const nameToDataMap = new Map();
             contacts.forEach(contact => {
                 if (!nameToDataMap.has(contact.name)) nameToDataMap.set(contact.name, { numbers: [], emails: [], addresses: [], isLabel: contact.isLabel });
@@ -652,7 +664,8 @@
                     let color = 'rgb(255, 255, 255)';
                     if (res === 'yes') color = 'rgb(24, 168, 65)'; else if (res === 'no') color = 'rgb(252, 18, 51)';
                     const prot = `(${number.slice(0, 3)})&#8203; ${number.slice(3, 6)}-${number.slice(6)}`;
-                    html += `<div><span style="color: ${color};">${prot}</span></div>`;
+                    const cellTag = cellularSet.has(number) ? ` <span style="color: rgb(161, 161, 170); font-size: 0.85rem;">Cellular</span>` : '';
+                    html += `<div><span style="color: ${color};">${prot}</span>${cellTag}</div>`;
                 });
                 html += '</div>';
                 // Real empty line between groups so it survives copy/paste (margin doesn't).
@@ -689,6 +702,7 @@
                     nc.numbers.forEach(n => { if (!ex.numbers.includes(n)) ex.numbers.push(n); });
                     ex.emails = [...new Set([...(ex.emails || []), ...(nc.emails || [])])];
                     ex.addresses = [...new Set([...(ex.addresses || []), ...(nc.addresses || [])])];
+                    ex.cellular = [...new Set([...(ex.cellular || []), ...(nc.cellular || [])])];
                 } else contacts.push(nc);
             });
             deduplicateContactsGlobally();
